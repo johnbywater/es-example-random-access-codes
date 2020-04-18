@@ -1,3 +1,5 @@
+# https://github.com/ylorph/The-Inevitable-Event-Centric-Book/issues/47
+#
 # You must assign a unique access code in a (pseudo) random fashion.
 # The range of access code at your disposal is [1 000 000, 1 999 999]
 # The access code will be used to give you access to the system at a certain day
@@ -12,6 +14,7 @@
 #
 # Solve this in an Event Sourced fashion.
 # Bonus point if the assignment of the access code does not suffer from Eventual Consistency
+#
 from datetime import datetime, timedelta
 from unittest import TestCase
 
