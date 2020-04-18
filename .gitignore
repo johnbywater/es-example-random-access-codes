@@ -8,8 +8,6 @@ __pycache__/
 # C extensions
 *.so
 
-.idea/
-
 # Distribution / packaging
 .Python
 build/
@@ -142,3 +140,5 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
+# IDE
+.idea/
