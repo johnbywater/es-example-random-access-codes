@@ -40,8 +40,8 @@ class TestAccessCodes(TestCase):
 
     def test_issue_and_gain_access(self):
         # Issue access code.
-        issued_on = datetime.now()
         access_code_number = self.app.generate_access_code_number()
+        issued_on = datetime.now()
         self.app.issue_access_code(access_code_number, issued_on)
 
         # Gain access.
@@ -60,8 +60,8 @@ class TestAccessCodes(TestCase):
             self.app.authorise_access(1000001, accessed_on)
 
         # Issue access code.
-        issued_on = datetime.now()
         access_code_number = self.app.generate_access_code_number()
+        issued_on = datetime.now()
         self.app.issue_access_code(access_code_number, issued_on)
 
         # Revoke access.
@@ -79,8 +79,8 @@ class TestAccessCodes(TestCase):
 
     def test_issue_and_expire(self):
         # Issue access code.
-        issued_on = datetime.now()
         access_code_number = self.app.generate_access_code_number()
+        issued_on = datetime.now()
         self.app.issue_access_code(access_code_number, issued_on)
 
         # Fail to gain access after 48hrs.
@@ -90,8 +90,8 @@ class TestAccessCodes(TestCase):
 
     def test_issue_and_prevent_reuse_for_six_months(self):
         # Issue access code.
-        issued_on = datetime.now()
         access_code_number = self.app.generate_access_code_number()
+        issued_on = datetime.now()
         self.app.issue_access_code(access_code_number, issued_on)
 
         # Fail to issue same access code 100 days later.
