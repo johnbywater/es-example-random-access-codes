@@ -22,117 +22,110 @@ from eventsourcing.application.notificationlog import NotificationLogReader
 from eventsourcing.application.popo import PopoApplication
 
 from randomaccesscodes.application import AccessCodesApplication
-from randomaccesscodes.exceptions import AccessDenied, Unusable
+from randomaccesscodes.exceptions import AccessDenied, RevokeError, RecycleError
 
 
 class TestAccessCodes(TestCase):
-    def test_issue_and_gain_access(self):
-        with self.construct_app() as app:
-            app: AccessCodesApplication
+    def setUp(self) -> None:
+        self.app = AccessCodesApplication.mixin(infrastructure_class=PopoApplication)()
 
-            # Fail to gain access with invalid access code number.
-            with self.assertRaises(AccessDenied):
-                accessed_on = datetime.now()
-                app.authorise_access(1000001, accessed_on)
+    def tearDown(self) -> None:
+        self.app.close()
 
-            # Issue access code.
-            issued_on = datetime.now()
-            access_code_number = app.generate_access_code_number()
-            app.issue_access_code(issued_on, access_code_number)
-
-            # Gain access.
+    def test_invalid_access_code_denied(self):
+        # Fail to gain access with invalid access code number.
+        with self.assertRaises(AccessDenied):
             accessed_on = datetime.now()
-            app.authorise_access(access_code_number, accessed_on)
+            self.app.authorise_access(1000001, accessed_on)
 
-            # Fail to gain access twice.
-            with self.assertRaises(AccessDenied):
-                accessed_on = datetime.now()
-                app.authorise_access(access_code_number, accessed_on)
+    def test_issue_and_gain_access(self):
+        # Issue access code.
+        issued_on = datetime.now()
+        access_code_number = self.app.generate_access_code_number()
+        self.app.issue_access_code(access_code_number, issued_on)
+
+        # Gain access.
+        accessed_on = datetime.now()
+        self.app.authorise_access(access_code_number, accessed_on)
+
+        # Fail to gain access twice.
+        with self.assertRaises(AccessDenied):
+            accessed_on = datetime.now()
+            self.app.authorise_access(access_code_number, accessed_on)
 
     def test_issue_and_revoke_access(self):
-        with self.construct_app() as app:
-            app: AccessCodesApplication
+        # Fail to gain access with invalid access code number.
+        with self.assertRaises(AccessDenied):
+            accessed_on = datetime.now()
+            self.app.authorise_access(1000001, accessed_on)
 
-            # Fail to gain access with invalid access code number.
-            with self.assertRaises(AccessDenied):
-                accessed_on = datetime.now()
-                app.authorise_access(1000001, accessed_on)
+        # Issue access code.
+        issued_on = datetime.now()
+        access_code_number = self.app.generate_access_code_number()
+        self.app.issue_access_code(access_code_number, issued_on)
 
-            # Issue access code.
-            issued_on = datetime.now()
-            access_code_number = app.generate_access_code_number()
-            app.issue_access_code(issued_on, access_code_number)
+        # Revoke access.
+        self.app.revoke_access(access_code_number)
 
-            # Revoke access.
-            app.revoke_access(access_code_number)
+        # Fail to gain access.
+        with self.assertRaises(AccessDenied):
+            accessed_on = datetime.now()
+            self.app.authorise_access(access_code_number, accessed_on)
 
-            # Fail to gain access.
-            with self.assertRaises(AccessDenied):
-                accessed_on = datetime.now()
-                app.authorise_access(access_code_number, accessed_on)
+    def test_revoke_invalid_access_code(self):
+        # Fail to revoke access code.
+        with self.assertRaises(RevokeError):
+            self.app.revoke_access(1000001)
 
-    def test_issue_and_expire_access(self):
-        with self.construct_app() as app:
-            app: AccessCodesApplication
+    def test_issue_and_expire(self):
+        # Issue access code.
+        issued_on = datetime.now()
+        access_code_number = self.app.generate_access_code_number()
+        self.app.issue_access_code(access_code_number, issued_on)
 
-            # Issue access code.
-            issued_on = datetime.now()
-            access_code_number = app.generate_access_code_number()
-            app.issue_access_code(issued_on, access_code_number)
+        # Fail to gain access after 48hrs.
+        accessed_on = issued_on + timedelta(days=2)
+        with self.assertRaises(AccessDenied):
+            self.app.authorise_access(access_code_number, accessed_on)
 
-            # Fail to gain access after 48hrs.
-            accessed_on = issued_on + timedelta(days=2)
-            with self.assertRaises(AccessDenied):
-                app.authorise_access(access_code_number, accessed_on)
+    def test_issue_and_prevent_reuse_for_six_months(self):
+        # Issue access code.
+        issued_on = datetime.now()
+        access_code_number = self.app.generate_access_code_number()
+        self.app.issue_access_code(access_code_number, issued_on)
 
-    def test_issue_and_prevent_resuse_for_six_months(self):
-        with self.construct_app() as app:
-            app: AccessCodesApplication
+        # Fail to issue same access code 100 days later.
+        issued_on += timedelta(days=100)
+        with self.assertRaises(RecycleError):
+            self.app.issue_access_code(access_code_number, issued_on)
 
-            # Issue access code.
-            issued_on = datetime.now()
-            access_code_number = app.generate_access_code_number()
-            app.issue_access_code(issued_on, access_code_number)
+        # Issue same access code 200 days later.
+        issued_on += timedelta(days=200)
+        self.app.issue_access_code(access_code_number, issued_on)
 
-            # Fail to issue same access code 100 days later.
-            issued_on += timedelta(days=100)
-            with self.assertRaises(Unusable):
-                app.issue_access_code(issued_on, access_code_number)
+        # Gain access.
+        accessed_on = issued_on + timedelta(hours=3)
+        self.app.authorise_access(access_code_number, accessed_on)
 
-            # Issue same access code 200 days later.
-            issued_on += timedelta(days=200)
-            app.issue_access_code(issued_on, access_code_number)
-
-            # Gain access.
-            accessed_on = issued_on + timedelta(hours=3)
-            app.authorise_access(access_code_number, accessed_on)
-
-            # Fail to gain access twice.
-            with self.assertRaises(AccessDenied):
-                app.authorise_access(access_code_number, accessed_on)
+        # Fail to gain access twice.
+        with self.assertRaises(AccessDenied):
+            self.app.authorise_access(access_code_number, accessed_on)
 
     def test_run_for_a_few_days(self):
-        with self.construct_app() as app:
-            app: AccessCodesApplication
-            num_days = 200
-            num_access_codes_per_day = 1000
-            started_on = datetime.now()
-            for day in range(num_days):
-                for _ in range(num_access_codes_per_day):
-                    issued_on = started_on + timedelta(days=day)
-                    while True:
-                        access_code_number = app.generate_access_code_number()
-                        try:
-                            app.issue_access_code(issued_on, access_code_number)
-                        except Unusable:
-                            continue
-                        else:
-                            break
+        num_days = 200
+        num_access_codes_per_day = 1000
+        started_on = datetime.now()
+        for day in range(num_days):
+            for _ in range(num_access_codes_per_day):
+                issued_on = started_on + timedelta(days=day)
+                while True:
+                    access_code_number = self.app.generate_access_code_number()
+                    try:
+                        self.app.issue_access_code(access_code_number, issued_on)
+                    except RecycleError:
+                        continue
+                    else:
+                        break
 
-            reader = NotificationLogReader(app.notification_log)
-            self.assertEqual(
-                len(reader.read_list()), num_days * num_access_codes_per_day
-            )
-
-    def construct_app(self) -> AccessCodesApplication:
-        return AccessCodesApplication.mixin(PopoApplication)()
+        reader = NotificationLogReader(self.app.notification_log)
+        self.assertEqual(len(reader.read_list()), num_days * num_access_codes_per_day)
