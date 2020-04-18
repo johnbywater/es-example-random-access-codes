@@ -25,12 +25,6 @@ class AccessCode(BaseAggregateRoot):
         def mutate(self, obj: "AccessCode"):
             obj.status = AccessCode.STATUS_USED
 
-    def assert_status(self, required_status):
-        if self.status != required_status:
-            raise InvalidStatus(
-                "Status is %s but required to be %s" % (self.status, required_status)
-            )
-
     def revoke(self):
         self.assert_status(AccessCode.STATUS_ISSUED)
         self.__trigger_event__(self.Revoked)
@@ -38,10 +32,6 @@ class AccessCode(BaseAggregateRoot):
     class Revoked(BaseAggregateRoot.Event):
         def mutate(self, obj: "AccessCode"):
             obj.status = AccessCode.STATUS_REVOKED
-
-    def validate_access_time(self, accessed_on):
-        if accessed_on > self.issued_on + timedelta(days=1):
-            raise InvalidAccessTime()
 
     def recycle(self, issued_on):
         if issued_on < self.issued_on + timedelta(days=180):
@@ -55,4 +45,14 @@ class AccessCode(BaseAggregateRoot):
 
         @property
         def issued_on(self):
-            return self.__dict__['issued_on']
+            return self.__dict__["issued_on"]
+
+    def validate_access_time(self, accessed_on):
+        if accessed_on > self.issued_on + timedelta(days=1):
+            raise InvalidAccessTime()
+
+    def assert_status(self, required_status):
+        if self.status != required_status:
+            raise InvalidStatus(
+                "Status is %s but required to be %s" % (self.status, required_status)
+            )
