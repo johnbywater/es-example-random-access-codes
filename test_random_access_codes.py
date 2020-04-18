@@ -24,7 +24,7 @@ from randomaccesscodes.exceptions import AccessDenied, Unusable
 
 class TestAccessCodes(TestCase):
     def test_issue_and_gain_access(self):
-        with AccessCodesApplication.mixin(PopoApplication)() as app:
+        with self.construct_app() as app:
             app: AccessCodesApplication
 
             # Fail to gain access with invalid access code number.
@@ -36,7 +36,6 @@ class TestAccessCodes(TestCase):
             issued_on = datetime.now()
             access_code_number = app.generate_access_code_number()
             app.issue_access_code(issued_on, access_code_number)
-            self.assertIsInstance(access_code_number, int)
 
             # Gain access.
             accessed_on = datetime.now()
@@ -48,7 +47,7 @@ class TestAccessCodes(TestCase):
                 app.authorise_access(access_code_number, accessed_on)
 
     def test_issue_and_revoke_access(self):
-        with AccessCodesApplication.mixin(PopoApplication)() as app:
+        with self.construct_app() as app:
             app: AccessCodesApplication
 
             # Fail to gain access with invalid access code number.
@@ -60,7 +59,6 @@ class TestAccessCodes(TestCase):
             issued_on = datetime.now()
             access_code_number = app.generate_access_code_number()
             app.issue_access_code(issued_on, access_code_number)
-            self.assertIsInstance(access_code_number, int)
 
             # Revoke access.
             app.revoke_access(access_code_number)
@@ -71,7 +69,7 @@ class TestAccessCodes(TestCase):
                 app.authorise_access(access_code_number, accessed_on)
 
     def test_issue_and_expire_access(self):
-        with AccessCodesApplication.mixin(PopoApplication)() as app:
+        with self.construct_app() as app:
             app: AccessCodesApplication
 
             # Issue access code.
@@ -85,7 +83,7 @@ class TestAccessCodes(TestCase):
                 app.authorise_access(access_code_number, accessed_on)
 
     def test_issue_and_prevent_resuse_for_six_months(self):
-        with AccessCodesApplication.mixin(PopoApplication)() as app:
+        with self.construct_app() as app:
             app: AccessCodesApplication
 
             # Issue access code.
@@ -111,9 +109,8 @@ class TestAccessCodes(TestCase):
                 app.authorise_access(access_code_number, accessed_on)
 
     def test_run_for_a_few_days(self):
-        with AccessCodesApplication.mixin(PopoApplication)() as app:
+        with self.construct_app() as app:
             app: AccessCodesApplication
-
             num_days = 200
             num_access_codes_per_day = 1000
             started_on = datetime.now()
@@ -133,3 +130,6 @@ class TestAccessCodes(TestCase):
             self.assertEqual(
                 len(reader.read_list()), num_days * num_access_codes_per_day
             )
+
+    def construct_app(self) -> AccessCodesApplication:
+        return AccessCodesApplication.mixin(PopoApplication)()

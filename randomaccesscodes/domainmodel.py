@@ -52,3 +52,7 @@ class AccessCode(BaseAggregateRoot):
         def mutate(self, obj: "AccessCode"):
             obj.status = AccessCode.STATUS_ISSUED
             obj.issued_on = self.issued_on
+
+        @property
+        def issued_on(self):
+            return self.__dict__['issued_on']
